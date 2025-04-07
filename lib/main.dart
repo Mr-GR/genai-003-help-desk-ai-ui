@@ -52,32 +52,45 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
   List<Request> requestHistory = [];
   String serviceURL = "http://localhost:8080/";
   String queryMode = "RAG";
+  bool _isLoading = false;
 
   Future<void> createRequest(String ticket) async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final uri = Uri.parse('${serviceURL}${queryMode == "RAG" ? "request" : "ask"}');
     final body = queryMode == "RAG"
         ? {"ticket": ticket}
         : {"question": ticket};
 
-    final response = await http.post(
-      uri,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(body),
-    );
+    try {
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
 
-    if (response.statusCode == 200) {
-      final responseData = json.decode(utf8.decode(response.bodyBytes));
-      final newRequest = Request.fromJson({
-        ...responseData,
-        'ticket': ticket,
-      });
+      if (response.statusCode == 200) {
+        final responseData = json.decode(utf8.decode(response.bodyBytes));
+        final newRequest = Request.fromJson({
+          ...responseData,
+          'ticket': ticket,
+        });
 
+        setState(() {
+          requestHistory.add(newRequest);
+          requestBox.clear();
+        });
+      } else {
+        print("Error (${response.statusCode}): ${response.body}");
+      }
+    } catch (e) {
+      print("Exception: $e");
+    } finally {
       setState(() {
-        requestHistory.add(newRequest);
-        requestBox.clear();
+        _isLoading = false;
       });
-    } else {
-      print("Error (${response.statusCode}): ${response.body}");
     }
   }
 
@@ -173,6 +186,7 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
               Expanded(
                 child: TextField(
                   controller: requestBox,
+                  enabled: !_isLoading,
                   decoration: const InputDecoration(
                     hintText: 'Ask a question...',
                     border: OutlineInputBorder(),
@@ -183,26 +197,35 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
               const SizedBox(width: 8),
               DropdownButton<String>(
                 value: queryMode,
+                onChanged: _isLoading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          queryMode = value!;
+                        });
+                      },
                 items: const [
                   DropdownMenuItem(value: "RAG", child: Text("RAG")),
                   DropdownMenuItem(value: "LLM", child: Text("LLM")),
                 ],
-                onChanged: (value) {
-                  setState(() {
-                    queryMode = value!;
-                  });
-                },
               ),
-              IconButton(
-                icon: const Icon(Icons.send),
-                iconSize: 28,
-                color: Colors.green,
-                onPressed: () {
-                  if (requestBox.text.isNotEmpty) {
-                    createRequest(requestBox.text);
-                  }
-                },
-              ),
+              const SizedBox(width: 8),
+              _isLoading
+                  ? const SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.send),
+                      iconSize: 28,
+                      color: Colors.green,
+                      onPressed: () {
+                        if (requestBox.text.isNotEmpty) {
+                          createRequest(requestBox.text);
+                        }
+                      },
+                    ),
             ],
           ),
         ),
