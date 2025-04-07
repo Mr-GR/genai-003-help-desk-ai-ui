@@ -11,7 +11,7 @@ class Request {
   factory Request.fromJson(Map<String, dynamic> json) {
     return Request(
       ticket: json['ticket'],
-      response: json['response'] ?? json['answer'], // works for both endpoints
+      response: json['response'] ?? json['answer'],
     );
   }
 }
