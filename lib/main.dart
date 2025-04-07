@@ -2,10 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-// String decodeUtf8Safe(String input) {
-//   return String.fromCharCodes(input.runes);
-// }
-
 class Request {
   final String ticket;
   final String response;
@@ -15,7 +11,7 @@ class Request {
   factory Request.fromJson(Map<String, dynamic> json) {
     return Request(
       ticket: json['ticket'],
-      response: json['response'],
+      response: json['response'] ?? json['answer'], // works for both endpoints
     );
   }
 }
@@ -53,46 +49,36 @@ class HelpDeskAIUIAppWidget extends StatefulWidget {
 class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
   final _biggerFont = const TextStyle(fontSize: 18);
   final requestBox = TextEditingController();
-  late Future<List<Request>> futureRequests;
+  List<Request> requestHistory = [];
   String serviceURL = "http://localhost:8080/";
+  String queryMode = "RAG";
 
-  Future<List<Request>> getRequests() async {
-    final response = await http.get(
-      Uri.parse('${serviceURL}requests'),
-      headers: {"Accept": "application/json"},
-    );
+  Future<void> createRequest(String ticket) async {
+    final uri = Uri.parse('${serviceURL}${queryMode == "RAG" ? "request" : "ask"}');
+    final body = queryMode == "RAG"
+        ? {"ticket": ticket}
+        : {"question": ticket};
 
-    if (response.statusCode == 200) {
-      final List<dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
-      return responseData.map((data) => Request.fromJson(data)).toList();
-    } else {
-      throw Exception('Failed to load requests');
-    }
-  }
-
-  void createRequest(String ticket) async {
     final response = await http.post(
-      Uri.parse('${serviceURL}request'),
+      uri,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode(<String, String>{
-        'ticket': ticket,
-      }),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode == 200) {
+      final responseData = json.decode(utf8.decode(response.bodyBytes));
+      final newRequest = Request.fromJson({
+        ...responseData,
+        'ticket': ticket,
+      });
+
       setState(() {
-        futureRequests = getRequests();
+        requestHistory.add(newRequest);
         requestBox.clear();
       });
     } else {
-      print("Error creating request: ${response.statusCode}");
+      print("Error (${response.statusCode}): ${response.body}");
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    futureRequests = getRequests();
   }
 
   @override
@@ -100,17 +86,12 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
     return Column(
       children: [
         Expanded(
-          child: FutureBuilder<List<Request>>(
-            future: futureRequests,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                return ListView.builder(
+          child: requestHistory.isNotEmpty
+              ? ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  itemCount: snapshot.data!.length,
+                  itemCount: requestHistory.length,
                   itemBuilder: (context, index) {
-                    final request = snapshot.data![index];
+                    final request = requestHistory[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                           vertical: 6.0, horizontal: 12.0),
@@ -132,7 +113,7 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Text(
-                                      request.ticket,// utf8.decode();
+                                      request.ticket,
                                       style: const TextStyle(color: Colors.black87),
                                     ),
                                   ),
@@ -146,7 +127,6 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          // Agent response (left)
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Row(
@@ -179,21 +159,14 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
                       ),
                     );
                   },
-                );
-              } else {
-                return const Center(child: Text("No tickets yet."));
-              }
-            },
-          ),
+                )
+              : const Center(child: Text("No tickets yet.")),
         ),
-
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
           decoration: BoxDecoration(
             color: Colors.grey[100],
-            border: const Border(
-              top: BorderSide(color: Colors.black12),
-            ),
+            border: const Border(top: BorderSide(color: Colors.black12)),
           ),
           child: Row(
             children: <Widget>[
@@ -201,13 +174,25 @@ class _HelpDeskAIUIAppWidgetState extends State<HelpDeskAIUIAppWidget> {
                 child: TextField(
                   controller: requestBox,
                   decoration: const InputDecoration(
-                    hintText: 'Enter your ticket here',
+                    hintText: 'Ask a question...',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
+              DropdownButton<String>(
+                value: queryMode,
+                items: const [
+                  DropdownMenuItem(value: "RAG", child: Text("RAG")),
+                  DropdownMenuItem(value: "LLM", child: Text("LLM")),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    queryMode = value!;
+                  });
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.send),
                 iconSize: 28,
