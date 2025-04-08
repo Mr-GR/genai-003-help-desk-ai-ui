@@ -66,8 +66,6 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _inputField(BuildContext context) {
     final inputStyle = InputDecoration(
-      // filled: true,
-      // fillColor: const Color(0xFFE3F2FD),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide.none,
