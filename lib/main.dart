@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:help_desk_ai_ui/pages/chat.dart';
-import 'package:help_desk_ai_ui/pages/login.dart';
+import 'package:help_desk_ai_ui/pages/home.dart';
+import 'package:help_desk_ai_ui/pages/login_sign_up.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -37,8 +38,10 @@ class HelpDeskAIUIApp extends StatelessWidget {
         bodyMedium: TextStyle(color: Colors.black87),
       ),
     ),
+    initialRoute: '/',
     routes: {
-      '/': (context) => const LoginPage(),
+      '/': (context) => const LoginSignUpPage(),
+      '/home': (context) => const HomePage(),
       '/chat': (context) => const ChatPage(),
     },
   );
