@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:help_desk_ai_ui/pages/login.dart';
+import 'package:help_desk_ai_ui/pages/login_sign_up.dart';
+import 'package:help_desk_ai_ui/pages/home.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class Request {
@@ -22,19 +24,7 @@ class ChatPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'HelpDesk AI',
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-        primaryColor: const Color(0xFF1976D2),
-        inputDecorationTheme: const InputDecorationTheme(
-          filled: true,
-          fillColor: Color(0xFFE3F2FD),
-          border: OutlineInputBorder(),
-        ),
-      ),
-      home: const ChatPageWidget(),
-    );
+    return const ChatPageWidget();
   }
 }
 
@@ -61,30 +51,38 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
     final body = queryMode == "RAG" ? {"ticket": ticket} : {"question": ticket};
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+
       final response = await http.post(
         uri,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          if (token != null) "Authorization": "Bearer $token", 
+        },
         body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
         final responseData = json.decode(utf8.decode(response.bodyBytes));
         final newRequest = Request.fromJson({...responseData, 'ticket': ticket});
+
         setState(() {
           requestHistory.add(newRequest);
           requestBox.clear();
         });
       } else {
-        print("Error (${response.statusCode}): ${response.body}");
+        print("❌ Error (${response.statusCode}): ${response.body}");
       }
     } catch (e) {
-      print("Exception: $e");
+      print("⚠️ Exception: $e");
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -94,22 +92,8 @@ class _ChatPageWidgetState extends State<ChatPageWidget> {
         title: const Text('Help Desk AI'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () async {
-            final confirm = await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text("Leave chat?"),
-                content: const Text("Are you sure you want to return to the login screen?"),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-                  TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes")),
-                ],
-              ),
-            );
-
-            if (confirm == true) {
-              Navigator.pushNamed(context, '/');
-            }
+          onPressed: () {
+             Navigator.pushNamed(context, '/home');
           },
         ),
       ),
