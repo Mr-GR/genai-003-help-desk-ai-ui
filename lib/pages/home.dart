@@ -52,8 +52,8 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               icon: const Icon(Icons.help_outline),
               label: const Text("Support Docs"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[300],
-                foregroundColor: Colors.black87,
+                backgroundColor: const Color(0xFF1976D2),
+                foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 60),
                 textStyle: const TextStyle(fontSize: 18),
                 shape: RoundedRectangleBorder(

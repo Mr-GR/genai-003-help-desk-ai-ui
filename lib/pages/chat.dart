@@ -4,6 +4,10 @@ import 'package:help_desk_ai_ui/pages/login_sign_up.dart';
 import 'package:help_desk_ai_ui/pages/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:help_desk_ai_ui/config.dart';
+
+final String baseURL = Config.baseUrl.isNotEmpty ? Config.baseUrl : "localhost";
+
 
 class Request {
   final String ticket;
@@ -38,7 +42,7 @@ class ChatPageWidget extends StatefulWidget {
 class _ChatPageWidgetState extends State<ChatPageWidget> {
   final requestBox = TextEditingController();
   List<Request> requestHistory = [];
-  String serviceURL = "http://localhost:8080/";
+  String serviceURL = 'http://$baseURL:8080/';
   String queryMode = "RAG";
   bool _isLoading = false;
 
