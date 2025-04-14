@@ -4,6 +4,10 @@ import 'package:help_desk_ai_ui/pages/chat.dart';
 import 'package:help_desk_ai_ui/pages/home.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:help_desk_ai_ui/config.dart';
+
+final String baseURL = Config.baseUrl.isNotEmpty ? Config.baseUrl : "localhost";
+
 
 class LoginSignUpPage extends StatefulWidget {
   const LoginSignUpPage({super.key});
@@ -18,7 +22,7 @@ class _LoginSignUpPageState extends State<LoginSignUpPage> {
   bool _isLoading = false;
   bool _isLogin = true;
 
-  final String baseURL = "http://localhost:8080";
+  final String serviceURL = 'http://$baseURL:8080';
 
   @override
   void initState() {
@@ -39,7 +43,7 @@ class _LoginSignUpPageState extends State<LoginSignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      final endpoint = _isLogin ? "$baseURL/token" : "$baseURL/signup";
+      final endpoint = _isLogin ? "$serviceURL/token" : "$serviceURL/signup";
       final isForm = _isLogin;
       final headers = {
         "Content-Type": isForm
@@ -87,8 +91,14 @@ class _LoginSignUpPageState extends State<LoginSignUpPage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+      if (scaffoldMessenger != null) {
+        scaffoldMessenger.showSnackBar(SnackBar(content: Text(message)));
+      }
+    });
   }
+
 
   Widget _header() {
     return Column(
