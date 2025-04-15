@@ -5,6 +5,8 @@ import 'package:help_desk_ai_ui/pages/home.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:help_desk_ai_ui/config.dart';
+import 'package:help_desk_ai_ui/utils/error_parser.dart';
+
 
 final String baseURL = Config.baseUrl.isNotEmpty ? Config.baseUrl : "localhost";
 
@@ -80,8 +82,8 @@ class _LoginSignUpPageState extends State<LoginSignUpPage> {
           setState(() => _isLogin = true);
         }
       } else {
-        final error = jsonDecode(response.body)['detail'];
-        _showSnack("❌ ${_isLogin ? 'Login' : 'Signup'} failed: $error");
+        final error = parseErrorMessage(jsonDecode(response.body));
+        _showSnack("❌ $error");
       }
     } catch (e) {
       _showSnack("⚠️ Error: $e");
@@ -90,15 +92,32 @@ class _LoginSignUpPageState extends State<LoginSignUpPage> {
     }
   }
 
-  void _showSnack(String message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
-      if (scaffoldMessenger != null) {
-        scaffoldMessenger.showSnackBar(SnackBar(content: Text(message)));
-      }
-    });
-  }
+  // String parseErrorMessage(dynamic responseBody) {
+  //   if (responseBody is List && responseBody.isNotEmpty) {
+  //     return responseBody.map((e) => e["msg"] ?? "").whereType<String>().join('\n');
+  //   }
 
+  //   if (responseBody is Map && responseBody.containsKey("detail")) {
+  //     final detail = responseBody["detail"];
+  //     if (detail is String) return detail;
+  //     if (detail is List) {
+  //       return detail.map((e) => e["msg"] ?? "").whereType<String>().join('\n');
+  //     }
+  //   }
+
+  //   return "Something went wrong. Please try again.";
+  // }
+
+
+  void _showSnack(String message) {
+    final snackBar = SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.redAccent,
+      behavior: SnackBarBehavior.floating,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
 
   Widget _header() {
     return Column(
@@ -182,30 +201,16 @@ class _LoginSignUpPageState extends State<LoginSignUpPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      routes: {
-        '/chat': (context) => const ChatPage(),
-        '/home': (context) => const HomePageWidget(),
-      },
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-        primaryColor: const Color(0xFF1976D2),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.black87),
-        ),
-      ),
-      home: Scaffold(
-        body: Container(
-          margin: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _header(),
-              _inputFields(),
-              _toggleMode(),
-            ],
-          ),
+    return Scaffold(
+      body: Container(
+        margin: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _header(),
+            _inputFields(),
+            _toggleMode(),
+          ],
         ),
       ),
     );
